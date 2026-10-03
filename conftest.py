@@ -6,11 +6,15 @@ import pytest
 import logging
 from pyspark.sql import SparkSession
 
+# Import configuration constants (table names, CSV path, etc.)
+from test_configuration.config import RAW_CSV_PATH
+
 # Ensure directories exist
 os.makedirs("logs", exist_ok=True)
 os.makedirs("reports", exist_ok=True)
 os.makedirs("differences", exist_ok=True)
 
+# Configure shared logger — all test files and utility functions write to this file.
 logging.basicConfig(
     filename="logs/test_results.log",
     filemode='w',
@@ -44,3 +48,16 @@ def spark():
         spark_session = builder.getOrCreate()
     logger.info("SparkSession created successfully")
     return spark_session
+
+
+@pytest.fixture(scope="session")
+def raw_csv_df(spark):
+    """
+    Load the raw CSV file once per test session.
+    Uses header=True (first row is column names) and inferSchema=True.
+    Shared across all test files that need the raw source data.
+    """
+    logger.info(f"Loading raw CSV from: {RAW_CSV_PATH}")
+    df = spark.read.csv(RAW_CSV_PATH, header=True, inferSchema=True)
+    logger.info(f"Raw CSV loaded: {df.count()} rows, {len(df.columns)} columns")
+    return df
